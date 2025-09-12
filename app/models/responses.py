@@ -27,3 +27,25 @@ class TranslationDirectionResponse(BaseModel):
 class TranslationDirectionRequest(BaseModel):
     source_language: str
     target_language: str
+
+class ObjectsResponse(BaseModel):
+    objects: List[str]
+
+class SentenceGenerationRequest(BaseModel):
+    objects: List[str]
+    previous_sentences: List[str] = []
+
+class SentenceGenerationResponse(BaseModel):
+    sentence: str
+    target_word: str
+
+class TranslationRequest(BaseModel):
+    text: str
+    source_language: str = "ru"
+    target_language: str = "tt"
+
+class TranslationResponse(BaseModel):
+    original_text: str
+    translated_text: str
+    source_language: str
+    target_language: str

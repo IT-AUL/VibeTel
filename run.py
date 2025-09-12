@@ -3,7 +3,6 @@
 Скрипт для запуска VibeTel API сервера
 """
 import os
-import sys
 from dotenv import load_dotenv
 
 def check_environment():
@@ -11,8 +10,9 @@ def check_environment():
     load_dotenv()
     
     required_vars = [
-        'YANDEX_GPT_API_KEY',
-        'YANDEX_GPT_FOLDER_ID'
+        'YANDEX_KEY_ID',
+        'YANDEX_SECRET_KEY',
+        'YANDEX_FOLDER_ID'
     ]
     
     missing_vars = []
@@ -20,11 +20,14 @@ def check_environment():
         if not os.getenv(var):
             missing_vars.append(var)
     
+    local_mode = os.getenv('LOCAL', 'true').lower() == 'true'
+    print(f"Режим работы: {'Локальный' if local_mode else 'Серверный'}")
+    
     if missing_vars:
         print("Предупреждение: Не настроены переменные окружения:")
         for var in missing_vars:
             print(f"   - {var}")
-        print("\nSoздайте файл .env с необходимыми переменными")
+        print("\nСоздайте файл .env с необходимыми переменными")
         print("Приложение будет работать с ограниченным функционалом")
         print("-" * 50)
 

@@ -4,6 +4,7 @@ from ultralytics import YOLO
 import numpy as np
 from PIL import Image
 import logging
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -14,8 +15,12 @@ class YOLOService:
     
     def _load_model(self):
         try:
-            self.model = YOLO('yolov8n.pt')
-            logger.info("YOLO модель успешно загружена")
+            if settings.local:
+                self.model = YOLO("yolo11n.pt")
+                logger.info("YOLO модель загружена (локально): yolo11n.pt")
+            else:
+                self.model = YOLO("yolo11n_openvino_model/")
+                logger.info("YOLO модель загружена (сервер): yolo11n_openvino_model/")
         except Exception as e:
             logger.error(f"Ошибка загрузки YOLO модели: {e}")
             raise

@@ -1,18 +1,19 @@
-import asyncio
 import os
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, UploadFile, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-import uvicorn
 from dotenv import load_dotenv
 
 from app.services.yolo_service import YOLOService
 from app.services.yandex_gpt_service import YandexGPTService
 from app.services.translator_service import TranslatorService
 from app.services.database_service import DatabaseService
-from app.models.responses import ProcessImageResponse, SentencesResponse, TranslationDirectionResponse, TranslationDirectionRequest
+from app.models.responses import (
+    ProcessImageResponse, SentencesResponse, TranslationDirectionResponse, 
+    TranslationDirectionRequest, ObjectsResponse, SentenceGenerationRequest,
+    SentenceGenerationResponse, TranslationRequest, TranslationResponse
+)
 from app.utils.image_processor import ImageProcessor
 
 load_dotenv()
@@ -98,6 +99,79 @@ async def process_image(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка обработки: {str(e)}")
 
+# Новые разделенные ручки для фронта
+
+@app.post("/extract-objects", response_model=ObjectsResponse)
+async def extract_objects(file: UploadFile = File(...)):
+    """Ручка для выделения объектов из изображения"""
+    try:
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="Файл должен быть изображением")
+        
+        image_data = await file.read()
+        image = await image_processor.process_uploaded_image(image_data)
+        
+        objects_ru = await yolo_service.classify_objects(image)
+        if not objects_ru:
+            raise HTTPException(status_code=400, detail="Объекты на изображении не обнаружены")
+        
+        return ObjectsResponse(objects=objects_ru)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка обработки: {str(e)}")
+
+@app.post("/generate-sentence", response_model=SentenceGenerationResponse)
+async def generate_sentence(request: SentenceGenerationRequest):
+    """Ручка для составления предложений по объектам"""
+    try:
+        if not request.objects:
+            raise HTTPException(status_code=400, detail="Список объектов не может быть пустым")
+        
+        previous_sentences = request.previous_sentences if request.previous_sentences else await database_service.get_recent_sentences(limit=10)
+        
+        sentence_data = await yandex_gpt_service.generate_sentence(
+            objects=request.objects,
+            previous_sentences=previous_sentences
+        )
+        
+        # Сохраняем предложение в базу данных
+        await database_service.save_sentence(
+            sentence=sentence_data["sentence"],
+            target_word=sentence_data["target_word"],
+            objects=request.objects
+        )
+        
+        return SentenceGenerationResponse(
+            sentence=sentence_data["sentence"],
+            target_word=sentence_data["target_word"]
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка генерации предложения: {str(e)}")
+
+@app.post("/translate", response_model=TranslationResponse)
+async def translate_text(request: TranslationRequest):
+    """Ручка для перевода текста"""
+    try:
+        if not request.text:
+            raise HTTPException(status_code=400, detail="Текст для перевода не может быть пустым")
+        
+        translated_text = await translator_service.translate_text(
+            text=request.text,
+            source_lang=request.source_language,
+            target_lang=request.target_language
+        )
+        
+        return TranslationResponse(
+            original_text=request.text,
+            translated_text=translated_text,
+            source_language=request.source_language,
+            target_language=request.target_language
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка перевода: {str(e)}")
+
 @app.get("/sentences")
 async def get_sentences(limit: int = 20):
     sentences = await database_service.get_sentences_with_details(limit=limit)
@@ -170,11 +244,9 @@ async def health_check():
     return {
         "status": "healthy",
         "services": {
-            "yolo": "активен" if yolo_service.model else "недоступен",
-            "database": "активен" if database_service.connection else "недоступен",
-            "yandex_gpt": "активен" if yandex_gpt_service.api_key else "не настроен"
+            "yolo": "OK" if yolo_service.model else "ERROR",
+            "database": "OK" if database_service.connection else "ERROR",
+            "yandex_gpt": "OK" if yandex_gpt_service.sdk else "NOT_CONFIGURED"
         }
     }
 
-if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

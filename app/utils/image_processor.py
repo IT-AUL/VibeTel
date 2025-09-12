@@ -2,7 +2,6 @@ import io
 import logging
 from PIL import Image
 import numpy as np
-from typing import Union
 
 logger = logging.getLogger(__name__)
 

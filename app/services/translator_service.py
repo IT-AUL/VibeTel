@@ -1,13 +1,12 @@
 import asyncio
 import logging
 from typing import Optional
-from googletrans import Translator
+from deep_translator import GoogleTranslator
 
 logger = logging.getLogger(__name__)
 
 class TranslatorService:
     def __init__(self):
-        self.translator = Translator()
         self.source_language = 'ru'  # Исходный язык по умолчанию - русский
         self.target_language = 'tt'  # Целевой язык по умолчанию - татарский
     
@@ -38,8 +37,9 @@ class TranslatorService:
     def _translate_sync(self, text: str, target_lang: str, source_lang: str = None) -> str:
         try:
             source_lang = source_lang or self.source_language
-            result = self.translator.translate(text, src=source_lang, dest=target_lang)
-            return result.text
+            translator = GoogleTranslator(source=source_lang, target=target_lang)
+            result = translator.translate(text)
+            return result
         except Exception as e:
             logger.error(f"Ошибка синхронного перевода: {e}")
             return text
@@ -77,25 +77,12 @@ class TranslatorService:
             return None
         
         try:
-            loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(
-                None,
-                self._detect_language_sync,
-                text
-            )
-            
-            return result
+            # deep_translator не имеет встроенного определения языка
+            # Возвращаем source_language по умолчанию
+            return self.source_language
             
         except Exception as e:
             logger.error(f"Ошибка определения языка для '{text}': {e}")
-            return None
-    
-    def _detect_language_sync(self, text: str) -> Optional[str]:
-        try:
-            result = self.translator.detect(text)
-            return result.lang
-        except Exception as e:
-            logger.error(f"Ошибка синхронного определения языка: {e}")
             return None
     
     def set_target_language(self, language_code: str):
@@ -119,24 +106,24 @@ class TranslatorService:
     
     def get_supported_languages(self) -> dict:
         return {
-            'ru': 'Русский',
+            'ru': 'Russian',
             'en': 'English',
-            'de': 'Deutsch',
-            'fr': 'Français', 
-            'es': 'Español',
-            'it': 'Italiano',
-            'pt': 'Português',
-            'zh': '中文',
-            'ja': '日本語',
-            'ko': '한국어',
-            'ar': 'العربية',
-            'hi': 'हिन्दी',
-            'tr': 'Türkçe',
-            'pl': 'Polski',
-            'nl': 'Nederlands',
-            'sv': 'Svenska',
-            'da': 'Dansk',
-            'no': 'Norsk',
-            'fi': 'Suomi',
-            'tt': 'Татарча'
+            'de': 'German',
+            'fr': 'French', 
+            'es': 'Spanish',
+            'it': 'Italian',
+            'pt': 'Portuguese',
+            'zh': 'Chinese',
+            'ja': 'Japanese',
+            'ko': 'Korean',
+            'ar': 'Arabic',
+            'hi': 'Hindi',
+            'tr': 'Turkish',
+            'pl': 'Polish',
+            'nl': 'Dutch',
+            'sv': 'Swedish',
+            'da': 'Danish',
+            'no': 'Norwegian',
+            'fi': 'Finnish',
+            'tt': 'Tatar'
         }

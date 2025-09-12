@@ -1,60 +1,49 @@
-import aiohttp
 import os
 import random
 import logging
 from typing import List, Dict
+from yandex_cloud_ml_sdk import AsyncYCloudML
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 class YandexGPTService:
     def __init__(self):
-        self.api_key = os.getenv('YANDEX_GPT_API_KEY')
-        self.folder_id = os.getenv('YANDEX_GPT_FOLDER_ID')
-        self.model_uri = os.getenv('YANDEX_GPT_MODEL_URI', f'gpt://{self.folder_id}/yandexgpt-lite/latest')
-        self.api_url = 'https://llm.api.cloud.yandex.net/foundationModels/v1/completion'
+        self.key_id = settings.yandex_key_id
+        self.secret_key = settings.yandex_secret_key
+        self.folder_id = settings.yandex_folder_id
+        self.sdk = None
         
-        if not self.api_key or not self.folder_id:
-            logger.warning("Yandex GPT API ключи не настроены")
+        if self.key_id and self.secret_key and self.folder_id:
+            try:
+                self.sdk = AsyncYCloudML(
+                    folder_id=self.folder_id,
+                    auth=self.secret_key
+                )
+                logger.info("Yandex Cloud ML SDK инициализирован")
+                
+            except Exception as e:
+                logger.error(f"Ошибка инициализации Yandex Cloud ML SDK: {e}")
+                self.sdk = None
+        else:
+            logger.warning("Yandex GPT сервисный аккаунт не настроен")
     
     async def generate_sentence(self, objects: List[str], previous_sentences: List[str] = None) -> Dict[str, str]:
-        if not self.api_key:
+        if not self.sdk:
             return self._generate_fallback_sentence(objects)
         
         try:
             prompt = self._create_prompt(objects, previous_sentences)
             
-            headers = {
-                'Authorization': f'Api-Key {self.api_key}',
-                'Content-Type': 'application/json'
-            }
+            model = self.sdk.models.completions(settings.yandex_model)
             
-            payload = {
-                'modelUri': self.model_uri,
-                'completionOptions': {
-                    'stream': False,
-                    'temperature': 0.8,
-                    'maxTokens': 150
-                },
-                'messages': [
-                    {
-                        'role': 'user',
-                        'text': prompt
-                    }
-                ]
-            }
+            result = await model.configure(temperature=0.8, max_tokens=150).run(prompt)
             
-            async with aiohttp.ClientSession() as session:
-                async with session.post(self.api_url, headers=headers, json=payload) as response:
-                    if response.status == 200:
-                        result = await response.json()
-                        generated_text = result['result']['alternatives'][0]['message']['text'].strip()
-                        return self._parse_response(generated_text, objects)
-                    else:
-                        logger.error(f"Ошибка Yandex GPT API: {response.status}")
-                        return self._generate_fallback_sentence(objects)
+            generated_text = result.alternatives[0].text.strip()
+            return self._parse_response(generated_text, objects)
                         
         except Exception as e:
-            logger.error(f"Ошибка генерации предложения: {e}")
+            logger.error(f"Ошибка генерации предложения через SDK: {e}")
             return self._generate_fallback_sentence(objects)
     
     def _create_prompt(self, objects: List[str], previous_sentences: List[str] = None) -> str:
