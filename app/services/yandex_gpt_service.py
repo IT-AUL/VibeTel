@@ -104,7 +104,7 @@ class YandexGPTService:
 
 Создай аналогичное предложение с объектами: {objects_str}. {context}
 """
-
+        logger.info(prompt)
         return prompt
 
     def _generate_fallback_sentence(self, objects: List[str]) -> Dict[str, str]:
