@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 class ImageProcessor:
     def __init__(self):
-        self.max_size = (1024, 1024)
+        self.max_size = (2048, 2048)
         self.supported_formats = ['JPEG', 'PNG', 'JPG', 'WEBP']
     
     async def process_uploaded_image(self, image_data: bytes) -> Image.Image:
@@ -49,8 +49,8 @@ class ImageProcessor:
                 logger.warning("Изображение слишком маленькое")
                 return False
             
-            if image.size[0] > 4096 or image.size[1] > 4096:
-                logger.warning("Изображение слишком большое")
+            if image.size[0] > 8192 or image.size[1] > 8192:
+                logger.warning("Изображение слишком большое (максимум 8192x8192)")
                 return False
             
             return True

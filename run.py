@@ -48,7 +48,10 @@ def main():
         host="0.0.0.0",
         port=8000,
         reload=True,
-        log_level="info"
+        log_level="info",
+        # Увеличиваем лимиты для больших файлов
+        limit_max_requests=1000,
+        timeout_keep_alive=30
     )
 
 if __name__ == "__main__":

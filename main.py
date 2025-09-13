@@ -62,7 +62,7 @@ async def root():
 
 
 @app.post("/process-image", response_model=ProcessImageResponse)
-async def process_image(file: UploadFile = File(...)):
+async def process_image(file: UploadFile = File(..., description="Изображение для обработки (без ограничений размера)")):
     try:
         if not file.content_type.startswith('image/'):
             raise HTTPException(status_code=400, detail="Файл должен быть изображением")
@@ -118,7 +118,7 @@ async def process_image(file: UploadFile = File(...)):
 # Новые разделенные ручки для фронта
 
 @app.post("/extract-objects", response_model=ObjectsResponse)
-async def extract_objects(file: UploadFile = File(...)):
+async def extract_objects(file: UploadFile = File(..., description="Изображение для извлечения объектов (без ограничений размера)")):
     """Ручка для выделения объектов из изображения с координатами bbox"""
     try:
         if not file.content_type.startswith('image/'):

@@ -41,19 +41,25 @@ class YandexGPTService:
             
             if result and hasattr(result, 'alternatives') and result.alternatives:
                 generated_text = result.alternatives[0].text.strip()
-                parsed_result = self._parse_response(generated_text, objects)
-                if parsed_result:
-                    logger.info(f"Предложение создано: {parsed_result['sentence']}")
-                    return parsed_result
+                if generated_text:
+                    # Используем весь ответ LLM как предложение
+                    target_word = random.choice(objects)
+                    logger.info(f"Предложение создано через YandexGPT: {generated_text}")
+                    return {
+                        "sentence": generated_text,
+                        "target_word": target_word
+                    }
                 else:
-                    logger.warning("Не удалось распарсить ответ GPT")
+                    logger.warning("Пустой текст от YandexGPT")
             else:
                 logger.warning("Пустой ответ от YandexGPT")
             
+            logger.info("Используем fallback предложение")
             return self._generate_fallback_sentence(objects)
                         
         except Exception as e:
             logger.error(f"Ошибка генерации предложения через SDK: {e}")
+            logger.info("Используем fallback предложение")
             return self._generate_fallback_sentence(objects)
     
     def _create_prompt(self, objects: List[str], previous_sentences: List[str] = None) -> str:
@@ -84,72 +90,26 @@ class YandexGPTService:
 9. Длина: 4-10 слов
 10. Используй простые конструкции: субъект + глагол + объект(ы)
 
-Формат ответа:
-Предложение: [простое предложение с объектами]
-Слово: [главный объект из предложения]
+Напиши только само предложение без дополнительного форматирования.
 
-Примеры ОТЛИЧНЫХ простых предложений:
-Предложение: Мама держит мобильный телефон
-Слово: мобильный телефон
+Примеры хороших предложений:
+"Мама держит мобильный телефон"
+"Папа читает книгу дома"
+"Дети играют с мячом"
+"Я покупаю новый мобильный телефон"
+"Кот спит на стуле"
+"На столе лежат чашка и книга"
+"Машина стоит возле дома"
 
-Предложение: Папа читает книгу дома
-Слово: книга
-
-Предложение: Дети играют с мячом
-Слово: мяч
-
-Предложение: Я покупаю новый мобильный телефон
-Слово: мобильный телефон
-
-Предложение: Кот спит на стуле
-Слово: кот
-
-ПРАВИЛЬНО: "Я держу мобильный телефон" (целевое слово: мобильный телефон)
-НЕПРАВИЛЬНО: "Я держу телефон" (целевое слово: мобильный телефон)
+Создай аналогичное предложение с объектами: {objects_str}
 """
         
         return prompt
     
-    def _parse_response(self, response_text: str, objects: List[str]) -> Dict[str, str]:
-        try:
-            lines = response_text.strip().split('\n')
-            sentence = ""
-            target_word = ""
-            
-            for line in lines:
-                if line.startswith('Предложение:'):
-                    sentence = line.replace('Предложение:', '').strip()
-                elif line.startswith('Слово:'):
-                    target_word = line.replace('Слово:', '').strip()
-            
-            if not sentence or not target_word:
-                return None
-            
-            # Проверяем, что target_word точно соответствует одному из объектов
-            target_word_lower = target_word.lower()
-            objects_lower = [obj.lower() for obj in objects]
-            
-            if target_word_lower not in objects_lower:
-                return None
-            else:
-                # Возвращаем оригинальное написание из списка объектов
-                target_word = objects[objects_lower.index(target_word_lower)]
-            
-            # Проверяем, что целевое слово действительно есть в предложении
-            if target_word.lower() not in sentence.lower():
-                return None
-            
-            return {
-                "sentence": sentence,
-                "target_word": target_word
-            }
-            
-        except Exception as e:
-            logger.error(f"Ошибка парсинга ответа GPT: {e}")
-            return None
     
     def _generate_fallback_sentence(self, objects: List[str]) -> Dict[str, str]:
         target_word = random.choice(objects)
+        logger.info("Предложение замокано (fallback)")
         
         # Если несколько объектов, пытаемся создать предложение с 2-3 объектами
         if len(objects) >= 2:
