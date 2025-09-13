@@ -81,6 +81,11 @@ class YOLOService:
                 image
             )
 
+            img_w, img_h = image.size
+
+            def _clamp01(v: float) -> float:
+                return 0.0 if v < 0 else 1.0 if v > 1 else v
+
             detections: List[Dict[str, Any]] = []
             for result in results:
                 boxes = getattr(result, 'boxes', None)
@@ -91,10 +96,16 @@ class YOLOService:
                 xyxy_list = boxes.xyxy.tolist()
                 for cls_id, conf, xyxy in zip(cls_list, conf_list, xyxy_list):
                     class_en = self.model.names[int(cls_id)]
+                    x1, y1, x2, y2 = float(xyxy[0]), float(xyxy[1]), float(xyxy[2]), float(xyxy[3])
+                    # Нормализация
+                    nx1 = _clamp01(x1 / img_w)
+                    ny1 = _clamp01(y1 / img_h)
+                    nx2 = _clamp01(x2 / img_w)
+                    ny2 = _clamp01(y2 / img_h)
                     detections.append({
                         'class_en': class_en,
                         'confidence': float(conf),
-                        'bbox': [float(xyxy[0]), float(xyxy[1]), float(xyxy[2]), float(xyxy[3])]
+                        'bbox': [nx1, ny1, nx2, ny2]
                     })
 
             # Переводим на русский и убираем class_en
@@ -104,7 +115,7 @@ class YOLOService:
                     d['class_ru'] = name_ru
                     d.pop('class_en', None)
 
-            logger.info(f"Детекции (до 10): {detections}")
+            logger.info(f"Детекции (до 10, norm): {detections}")
             return detections
 
         except Exception as e:

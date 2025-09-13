@@ -13,6 +13,11 @@ class ProcessImageResponse(BaseModel):
     target_word_ru: str
     target_word_tt: str
     detections: List[Dict[str, Any]]
+    # Метаданные для фронтенда
+    image_width: int
+    image_height: int
+    bbox_format: str = "xyxy"  # [x1,y1,x2,y2] в пикселях
+    normalized: bool = True
 
 
 class SentenceRecord(BaseModel):
@@ -41,6 +46,11 @@ class ObjectsResponse(BaseModel):
     objects: List[str]
     objects_tt: List[str] = []  # переводы на татарский
     detections: List[Dict[str, Any]]
+    # Метаданные для фронтенда
+    image_width: int
+    image_height: int
+    bbox_format: str = "xyxy"
+    normalized: bool = True
 
 
 class SentenceGenerationRequest(BaseModel):

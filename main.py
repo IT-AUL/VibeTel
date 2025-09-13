@@ -108,7 +108,9 @@ async def process_image(file: UploadFile = File(..., description="Изображ
             sentence_tt=sentence_tt,
             target_word_ru=sentence_data["target_word"],
             target_word_tt=target_word_tt,
-            detections=detections
+            detections=detections,
+            image_width=image.width,
+            image_height=image.height
         )
 
     except HTTPException as e:
@@ -144,7 +146,13 @@ async def extract_objects(file: UploadFile = File(..., description="Изобра
         # Перевод объектов на татарский
         objects_tt = await translator_service.translate_multiple(objects_ru)
 
-        return ObjectsResponse(objects=objects_ru, objects_tt=objects_tt, detections=detections)
+        return ObjectsResponse(
+            objects=objects_ru,
+            objects_tt=objects_tt,
+            detections=detections,
+            image_width=image.width,
+            image_height=image.height
+        )
 
     except HTTPException as e:
         # Пробрасываем 4xx ошибки, чтобы не превращались в 500
