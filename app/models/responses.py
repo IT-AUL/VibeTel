@@ -52,6 +52,14 @@ class SentenceGenerationResponse(BaseModel):
     target_word: str
 
 
+# Новая модель ответа: сразу две версии предложения (RU и TT)
+class BilingualSentenceResponse(BaseModel):
+    sentence_ru: str
+    sentence_tt: str
+    target_word_ru: str
+    target_word_tt: str
+
+
 class TranslationRequest(BaseModel):
     text: str
     source_language: str = "ru"

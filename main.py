@@ -12,7 +12,8 @@ from app.services.database_service import DatabaseService
 from app.models.responses import (
     ProcessImageResponse, SentencesResponse, TranslationDirectionResponse,
     TranslationDirectionRequest, ObjectsResponse, SentenceGenerationRequest,
-    SentenceGenerationResponse, TranslationRequest, TranslationResponse, AudioRequest, AudioResponse
+    SentenceGenerationResponse, TranslationRequest, TranslationResponse, AudioRequest, AudioResponse,
+    BilingualSentenceResponse
 )
 from app.utils.image_processor import ImageProcessor
 # Импортируем модуль сервиса аудио, чтобы избежать конфликта имён функции
@@ -181,6 +182,45 @@ async def generate_sentence(request: SentenceGenerationRequest):
         raise HTTPException(status_code=500, detail=f"Ошибка генерации предложения: {str(e)}")
 
 
+# Новый эндпоинт: сразу русское и татарское предложение
+@app.post("/generate-sentence-bilingual", response_model=BilingualSentenceResponse)
+async def generate_sentence_bilingual(request: SentenceGenerationRequest):
+    try:
+        if not request.objects:
+            raise HTTPException(status_code=400, detail="Список объектов не может быть пустым")
+
+        previous_sentences = request.previous_sentences if request.previous_sentences else await database_service.get_recent_sentences(limit=10)
+
+        sentence_data = await yandex_gpt_service.generate_sentence(
+            objects=request.objects,
+            previous_sentences=previous_sentences
+        )
+
+        sentence_ru = sentence_data["sentence"]
+        target_word_ru = sentence_data["target_word"]
+
+        # Перевод в соответствии с текущими настройками TranslatorService
+        sentence_tt = await translator_service.translate_text(sentence_ru)
+        target_word_tt = await translator_service.translate_text(target_word_ru)
+
+        # Сохраняем русскую версию в БД
+        await database_service.save_sentence(
+            sentence=sentence_ru,
+            target_word=target_word_ru,
+            objects=request.objects
+        )
+
+        return BilingualSentenceResponse(
+            sentence_ru=sentence_ru,
+            sentence_tt=sentence_tt,
+            target_word_ru=target_word_ru,
+            target_word_tt=target_word_tt
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка генерации предложения: {str(e)}")
+
+
 @app.post("/translate", response_model=TranslationResponse)
 async def translate_text(request: TranslationRequest):
     """Ручка для перевода текста"""
@@ -258,7 +298,7 @@ async def set_translation_direction(request: TranslationDirectionRequest):
     if request.source_language not in supported_languages:
         raise HTTPException(
             status_code=400,
-            detail=f"Неподдерживаемый исходный язык. Доступные языки: {list(supported_languages.keys())}"
+            detail=f"Неподдерживаемый исходный язык. ��оступные языки: {list(supported_languages.keys())}"
         )
 
     if request.target_language not in supported_languages:
