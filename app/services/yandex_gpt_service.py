@@ -69,7 +69,7 @@ class YandexGPTService:
         context = ""
         if previous_sentences:
             recent_sentences = previous_sentences[-5:]
-            context = f"Предыдущие примеры предложений:\n"
+            context = f"Предыдущие предложений для связанной истории:\n"
             for sentence in recent_sentences:
                 context += f"- {sentence}\n"
             context += "\n"
