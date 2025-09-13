@@ -2,6 +2,7 @@ import io
 import logging
 from PIL import Image
 import numpy as np
+from PIL import ImageOps
 
 logger = logging.getLogger(__name__)
 
@@ -12,8 +13,8 @@ class ImageProcessor:
     
     async def process_uploaded_image(self, image_data: bytes) -> Image.Image:
         try:
-            image = Image.open(io.BytesIO(image_data))
-            
+            # image = Image.open(io.BytesIO(image_data))
+            image = ImageOps.exif_transpose(Image.open(io.BytesIO(image_data)))
             if image.format not in self.supported_formats:
                 logger.warning(f"Неподдерживаемый формат изображения: {image.format}")
             
