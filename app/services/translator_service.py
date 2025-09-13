@@ -1,7 +1,8 @@
 import asyncio
+import aiohttp
 import logging
-from typing import Optional
-from deep_translator import GoogleTranslator
+from typing import Optional, List
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -9,64 +10,73 @@ class TranslatorService:
     def __init__(self):
         self.source_language = 'ru'  # Исходный язык по умолчанию - русский
         self.target_language = 'tt'  # Целевой язык по умолчанию - татарский
+        self.api_key = settings.translater_api_key
+        self.folder_id = settings.translater_folder_id
+        self.api_url = "https://translate.api.cloud.yandex.net/translate/v2/translate"
     
     async def translate_text(self, text: str, target_lang: str = None, source_lang: str = None) -> str:
         if not text:
             return ""
         
+        if not self.api_key or not self.folder_id:
+            logger.warning("Yandex Translate API не настроен")
+            return text
+        
         target_lang = target_lang or self.target_language
         source_lang = source_lang or self.source_language
         
         try:
-            loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(
-                None,
-                self._translate_sync,
-                text,
-                target_lang,
-                source_lang
-            )
+            result = await self._translate_yandex([text], target_lang, source_lang)
+            translated_text = result[0] if result else text
             
-            logger.info(f"Переведен текст: '{text}' ({source_lang} -> {target_lang}) -> '{result}'")
-            return result
+            logger.info(f"Переведен текст: '{text}' ({source_lang} -> {target_lang}) -> '{translated_text}'")
+            return translated_text
             
         except Exception as e:
             logger.error(f"Ошибка перевода текста '{text}': {e}")
             return text
     
-    def _translate_sync(self, text: str, target_lang: str, source_lang: str = None) -> str:
-        try:
-            source_lang = source_lang or self.source_language
-            translator = GoogleTranslator(source=source_lang, target=target_lang)
-            result = translator.translate(text)
-            return result
-        except Exception as e:
-            logger.error(f"Ошибка синхронного перевода: {e}")
-            return text
+    async def _translate_yandex(self, texts: List[str], target_lang: str, source_lang: str) -> List[str]:
+        """Переводит список текстов через Yandex Translate API"""
+        body = {
+            "targetLanguageCode": target_lang,
+            "texts": texts,
+            "folderId": self.folder_id,
+            "sourceLanguageCode": source_lang,
+            "speller": True
+        }
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Api-Key {self.api_key}",
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(self.api_url, json=body, headers=headers) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return [translation["text"] for translation in data["translations"]]
+                else:
+                    error_text = await response.text()
+                    logger.error(f"Ошибка Yandex Translate API: {response.status} - {error_text}")
+                    return texts
     
     async def translate_multiple(self, texts: list, target_lang: str = None) -> list:
         if not texts:
             return []
         
+        if not self.api_key or not self.folder_id:
+            logger.warning("Yandex Translate API не настроен")
+            return texts
+        
         target_lang = target_lang or self.target_language
+        source_lang = self.source_language
         
         try:
-            tasks = []
-            for text in texts:
-                task = self.translate_text(text, target_lang)
-                tasks.append(task)
-            
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            
-            translated_texts = []
-            for i, result in enumerate(results):
-                if isinstance(result, Exception):
-                    logger.error(f"Ошибка перевода текста {i}: {result}")
-                    translated_texts.append(texts[i])
-                else:
-                    translated_texts.append(result)
-            
-            return translated_texts
+            # Yandex API может обрабатывать множественные тексты в одном запросе
+            results = await self._translate_yandex(texts, target_lang, source_lang)
+            logger.info(f"Переведено {len(texts)} текстов ({source_lang} -> {target_lang})")
+            return results
             
         except Exception as e:
             logger.error(f"Ошибка множественного перевода: {e}")
@@ -77,7 +87,7 @@ class TranslatorService:
             return None
         
         try:
-            # deep_translator не имеет встроенного определения языка
+            # Yandex Translate API не предоставляет определение языка в этом эндпоинте
             # Возвращаем source_language по умолчанию
             return self.source_language
             

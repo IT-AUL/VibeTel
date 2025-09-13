@@ -12,7 +12,9 @@ def check_environment():
     required_vars = [
         'YANDEX_KEY_ID',
         'YANDEX_SECRET_KEY',
-        'YANDEX_FOLDER_ID'
+        'YANDEX_FOLDER_ID',
+        'TRANSLATER_FOLDER_ID',
+        'TRANSLATER_API_KEY'
     ]
     
     missing_vars = []

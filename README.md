@@ -37,6 +37,8 @@ LOCAL=true
 YANDEX_KEY_ID=ваш_key_id
 YANDEX_SECRET_KEY=ваш_secret_key  
 YANDEX_FOLDER_ID=ваш_folder_id
+TRANSLATER_FOLDER_ID=ваш_translate_folder_id
+TRANSLATER_API_KEY=ваш_translate_api_key
 
 # Модель (опционально)
 MODEL=yandexgpt-lite
@@ -143,7 +145,7 @@ python test_new_api.py
 - **FastAPI** - веб-фреймворк
 - **YOLO (ultralytics)** - распознавание объектов
 - **YandexGPT** - генерация предложений через Yandex Cloud ML SDK
-- **Deep Translator** - перевод текстов
+- **Yandex Translate API** - перевод текстов
 - **SQLite** - база данных
 - **Pydantic** - валидация данных
 
@@ -155,9 +157,10 @@ python test_new_api.py
 
 ### Yandex Cloud
 Получите ключи в [консоли Yandex Cloud](https://console.cloud.yandex.ru/):
-1. IAM → Сервисные аккаунты
-2. Создайте новый ключ
-3. Скопируйте `KEY_ID`, `SECRET_KEY`, `FOLDER_ID`
+1. **Для YandexGPT:** IAM → Сервисные аккаунты → Создайте ключ
+   - Скопируйте `KEY_ID`, `SECRET_KEY`, `FOLDER_ID`
+2. **Для Yandex Translate:** API ключ для Translate API
+   - Скопируйте `TRANSLATER_API_KEY`
 
 ## Структура проекта
 
