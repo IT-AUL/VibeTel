@@ -1,7 +1,7 @@
 from enum import Enum
 
 from pydantic import BaseModel
-from typing import List
+from typing import List, Dict, Any
 from datetime import datetime
 
 
@@ -12,6 +12,7 @@ class ProcessImageResponse(BaseModel):
     sentence_tt: str
     target_word_ru: str
     target_word_tt: str
+    detections: List[Dict[str, Any]]
 
 
 class SentenceRecord(BaseModel):

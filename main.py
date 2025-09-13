@@ -71,9 +71,17 @@ async def process_image(file: UploadFile = File(...)):
 
         image = await image_processor.process_uploaded_image(image_data)
 
-        objects_ru = await yolo_service.classify_objects(image)
-        if not objects_ru:
+        # Получаем детекции с координатами
+        detections = await yolo_service.classify_objects(image)
+        if not detections:
             raise HTTPException(status_code=400, detail="Объекты на изображении не обнаружены")
+
+        # Список уникальных русских названий объектов по убыванию уверенности
+        objects_ru = []
+        for d in detections:
+            name = d.get('class_ru')
+            if name and name not in objects_ru:
+                objects_ru.append(name)
 
         previous_sentences = await database_service.get_recent_sentences(limit=10)
 
@@ -99,7 +107,8 @@ async def process_image(file: UploadFile = File(...)):
             sentence_ru=sentence_data["sentence"],
             sentence_tt=sentence_tt,
             target_word_ru=sentence_data["target_word"],
-            target_word_tt=target_word_tt
+            target_word_tt=target_word_tt,
+            detections=detections
         )
 
     except Exception as e:
@@ -110,7 +119,7 @@ async def process_image(file: UploadFile = File(...)):
 
 @app.post("/extract-objects", response_model=ObjectsResponse)
 async def extract_objects(file: UploadFile = File(...)):
-    """Ручка для выделения объектов из изображения"""
+    """Ручка для выделения объектов из изображения с координатами bbox"""
     try:
         if not file.content_type.startswith('image/'):
             raise HTTPException(status_code=400, detail="Файл должен быть изображением")
@@ -118,11 +127,11 @@ async def extract_objects(file: UploadFile = File(...)):
         image_data = await file.read()
         image = await image_processor.process_uploaded_image(image_data)
 
-        objects_ru = await yolo_service.classify_objects(image)
-        if not objects_ru:
+        detections = await yolo_service.classify_objects(image)
+        if not detections:
             raise HTTPException(status_code=400, detail="Объекты на изображении не обнаружены")
 
-        return ObjectsResponse(objects=objects_ru)
+        return ObjectsResponse(detections=detections)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка обработки: {str(e)}")
