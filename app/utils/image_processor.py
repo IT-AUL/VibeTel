@@ -21,8 +21,8 @@ class ImageProcessor:
                 image = image.convert('RGB')
                 logger.info(f"Изображение конвертировано в RGB режим")
             
-            image = self._resize_image(image)
-            
+            #image = self._resize_image(image)
+
             logger.info(f"Изображение обработано: размер {image.size}, режим {image.mode}")
             return image
             
@@ -33,11 +33,11 @@ class ImageProcessor:
     def _resize_image(self, image: Image.Image) -> Image.Image:
         if image.size[0] <= self.max_size[0] and image.size[1] <= self.max_size[1]:
             return image
-        
+
         image.thumbnail(self.max_size, Image.Resampling.LANCZOS)
         logger.info(f"Изображение изменено до размера: {image.size}")
         return image
-    
+
     async def validate_image(self, image_data: bytes) -> bool:
         try:
             image = Image.open(io.BytesIO(image_data))
