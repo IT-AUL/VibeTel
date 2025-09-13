@@ -1,5 +1,5 @@
 import asyncio
-from typing import List, Dict, Any
+from typing import List
 from ultralytics import YOLO
 import numpy as np
 from PIL import Image
@@ -26,10 +26,7 @@ class YOLOService:
             logger.error(f"Ошибка загрузки YOLO модели: {e}")
             raise
 
-    async def classify_objects(self, image: Image.Image) -> List[Dict[str, Any]]:
-        """Возвращает до 10 самых уверенных детекций со следующей структурой:
-        { 'class_ru': str, 'confidence': float, 'bbox': [x1, y1, x2, y2] }
-        """
+    async def classify_objects(self, image: Image.Image) -> List[str]:
         if self.model is None:
             raise RuntimeError("YOLO модель не загружена")
 
@@ -41,40 +38,25 @@ class YOLOService:
                 image
             )
 
-            detections = []
+            detected_objects = []
             for result in results:
-                boxes = getattr(result, 'boxes', None)
-                if boxes is None or len(boxes) == 0:
-                    continue
-                cls_list = boxes.cls.tolist()
-                conf_list = boxes.conf.tolist()
-                xyxy_list = boxes.xyxy.tolist()
-                for cls_id, conf, xyxy in zip(cls_list, conf_list, xyxy_list):
-                    class_en = self.model.names[int(cls_id)]
-                    detections.append({
-                        'class_en': class_en,
-                        'confidence': float(conf),
-                        'bbox': [float(xyxy[0]), float(xyxy[1]), float(xyxy[2]), float(xyxy[3])]
-                    })
+                if result.boxes is not None:
+                    for cls in result.boxes.cls:
+                        class_name = self.model.names[int(cls)]
+                        detected_objects.append(class_name)
 
-            # Переводим имена классов на русский
-            if detections:
-                translated = self.translate_class_names([d['class_en'] for d in detections])
-                for d, name_ru in zip(detections, translated):
-                    d['class_ru'] = name_ru
-                    d.pop('class_en', None)
-
-            logger.info(f"Детекции (до 10): {detections}")
-            return detections
+            translated_objects = self.translate_class_names(detected_objects)
+            logger.info(f"Обнаружены объекты (до 10): {detected_objects} -> {translated_objects}")
+            return translated_objects
 
         except Exception as e:
             logger.error(f"Ошибка классификации объектов: {e}")
             raise
 
-    def _run_inference(self, image: Image.Image):
+    def _run_inference(self, image: Image.Image, conf=0.5, max_det=10):
         image_array = np.array(image)
-        # Ограничиваем до 10 детекций и фильтруем по conf=0.5 встроенными параметрами
-        return self.model(image_array, verbose=False, conf=0.5, max_det=10)
+        # Встроенные параметры YOLO: ограничиваем до 10 самых уверенных детекций и порог 0.5
+        return self.model(image_array, verbose=False, conf=conf, max_det=max_det)
 
     def translate_class_names(self, objects: List[str]) -> List[str]:
         class_translations = {
