@@ -16,7 +16,6 @@ from app.models.responses import (
     BilingualSentenceResponse
 )
 from app.utils.image_processor import ImageProcessor
-# Импортируем модуль сервиса аудио, чтобы избежать конфликта имён функции
 from app.services import audio_generator
 
 load_dotenv()
@@ -142,7 +141,10 @@ async def extract_objects(file: UploadFile = File(..., description="Изобра
             if name and name not in objects_ru:
                 objects_ru.append(name)
 
-        return ObjectsResponse(objects=objects_ru, detections=detections)
+        # Перевод объектов на татарский
+        objects_tt = await translator_service.translate_multiple(objects_ru)
+
+        return ObjectsResponse(objects=objects_ru, objects_tt=objects_tt, detections=detections)
 
     except HTTPException as e:
         # Пробрасываем 4xx ошибки, чтобы не превращались в 500
@@ -298,7 +300,7 @@ async def set_translation_direction(request: TranslationDirectionRequest):
     if request.source_language not in supported_languages:
         raise HTTPException(
             status_code=400,
-            detail=f"Неподдерживаемый исходный язык. ��оступные языки: {list(supported_languages.keys())}"
+            detail=f"Неподдерживаемый исходный язык. Доступные языки: {list(supported_languages.keys())}"
         )
 
     if request.target_language not in supported_languages:

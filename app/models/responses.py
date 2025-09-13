@@ -39,6 +39,7 @@ class TranslationDirectionRequest(BaseModel):
 
 class ObjectsResponse(BaseModel):
     objects: List[str]
+    objects_tt: List[str] = []  # переводы на татарский
     detections: List[Dict[str, Any]]
 
 
