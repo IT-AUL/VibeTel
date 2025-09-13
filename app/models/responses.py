@@ -38,7 +38,7 @@ class TranslationDirectionRequest(BaseModel):
 
 
 class ObjectsResponse(BaseModel):
-    objects: List[str]
+    detections: List[Dict[str, Any]]
 
 
 class SentenceGenerationRequest(BaseModel):
