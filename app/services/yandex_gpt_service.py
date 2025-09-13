@@ -39,8 +39,18 @@ class YandexGPTService:
             
             result = await model.configure(temperature=0.8, max_tokens=150).run(prompt)
             
-            generated_text = result.alternatives[0].text.strip()
-            return self._parse_response(generated_text, objects)
+            if result and hasattr(result, 'alternatives') and result.alternatives:
+                generated_text = result.alternatives[0].text.strip()
+                parsed_result = self._parse_response(generated_text, objects)
+                if parsed_result:
+                    logger.info(f"Предложение создано: {parsed_result['sentence']}")
+                    return parsed_result
+                else:
+                    logger.warning("Не удалось распарсить ответ GPT")
+            else:
+                logger.warning("Пустой ответ от YandexGPT")
+            
+            return self._generate_fallback_sentence(objects)
                         
         except Exception as e:
             logger.error(f"Ошибка генерации предложения через SDK: {e}")
@@ -58,24 +68,25 @@ class YandexGPTService:
             context += "\n"
         
         prompt = f"""
-{context}Создай одно простое предложение на русском языке для изучающих язык, которое включает один из этих объектов: {objects_str}.
+{context}Создай одно простое предложение на русском языке для изучающих язык, используя объекты: {objects_str}.
+
+ЦЕЛЬ: Включи в предложение МАКСИМАЛЬНОЕ количество объектов из списка, но сохрани простоту для новичков.
 
 Требования:
 1. Предложение должно быть ОЧЕНЬ ПРОСТЫМ и понятным для начинающих
 2. Используй только базовую лексику (слова из первых 1000 самых частых русских слов)
-3. Используй настоящее время или простое прошедшее время
-4. Предложение должно звучать ЕСТЕСТВЕННО для носителя русского языка
-5. Выбери ОДИН объект из списка для включения в предложение
-6. ВАЖНО: Используй в предложении ТОЧНО ТО ЖЕ слово, которое указываешь как целевое
-7. НЕ сокращай слова (если объект "мобильный телефон", то в предложении тоже должно быть "мобильный телефон", а не просто "телефон")
-8. Предложение должно описывать простую повседневную ситуацию
-9. Длина: 4-8 слов (можно чуть длиннее для точности)
-10. Избегай сложных метафор, поэтических образов и редких слов
-11. Используй простые конструкции: субъект + глагол + объект
+3. По возможности включи НЕСКОЛЬКО объектов из списка: {objects_str}
+4. Если объектов много, выбери 2-3 самых важных
+5. Предложение должно звучать ЕСТЕСТВЕННО
+6. ВАЖНО: Используй в предложении ТОЧНО ТЕ ЖЕ слова, что в списке объектов
+7. НЕ сокращай слова
+8. Описывай простую повседневную ситуацию
+9. Длина: 4-10 слов
+10. Используй простые конструкции: субъект + глагол + объект(ы)
 
 Формат ответа:
-Предложение: [твое простое предложение]
-Слово: [выбранное слово из объектов]
+Предложение: [простое предложение с объектами]
+Слово: [главный объект из предложения]
 
 Примеры ОТЛИЧНЫХ простых предложений:
 Предложение: Мама держит мобильный телефон
@@ -112,23 +123,21 @@ class YandexGPTService:
                     target_word = line.replace('Слово:', '').strip()
             
             if not sentence or not target_word:
-                return self._generate_fallback_sentence(objects)
+                return None
             
             # Проверяем, что target_word точно соответствует одному из объектов
             target_word_lower = target_word.lower()
             objects_lower = [obj.lower() for obj in objects]
             
             if target_word_lower not in objects_lower:
-                # Если не нашли точное совпадение, генерируем fallback
-                return self._generate_fallback_sentence(objects)
+                return None
             else:
                 # Возвращаем оригинальное написание из списка объектов
                 target_word = objects[objects_lower.index(target_word_lower)]
             
             # Проверяем, что целевое слово действительно есть в предложении
             if target_word.lower() not in sentence.lower():
-                # Если целевого слова нет в предложении, генерируем fallback
-                return self._generate_fallback_sentence(objects)
+                return None
             
             return {
                 "sentence": sentence,
@@ -137,25 +146,43 @@ class YandexGPTService:
             
         except Exception as e:
             logger.error(f"Ошибка парсинга ответа GPT: {e}")
-            return self._generate_fallback_sentence(objects)
+            return None
     
     def _generate_fallback_sentence(self, objects: List[str]) -> Dict[str, str]:
         target_word = random.choice(objects)
         
-        sentence_templates = [
+        # Если несколько объектов, пытаемся создать предложение с 2-3 объектами
+        if len(objects) >= 2:
+            # Берем 2-3 объекта включая главный
+            selected_objects = [target_word]
+            other_objects = [obj for obj in objects if obj != target_word]
+            selected_objects.extend(other_objects[:2])  # Добавляем до 2 других
+            
+            # Шаблоны для нескольких объектов
+            if len(selected_objects) >= 2:
+                templates = [
+                    f"Я вижу {selected_objects[0]} и {selected_objects[1]}",
+                    f"На столе лежат {selected_objects[0]} и {selected_objects[1]}",
+                    f"Мама держит {selected_objects[0]} и {selected_objects[1]}",
+                    f"Здесь есть {selected_objects[0]} и {selected_objects[1]}"
+                ]
+                if len(selected_objects) >= 3:
+                    templates.extend([
+                        f"Я вижу {selected_objects[0]}, {selected_objects[1]} и {selected_objects[2]}",
+                        f"На картинке {selected_objects[0]}, {selected_objects[1]} и {selected_objects[2]}"
+                    ])
+                
+                sentence = random.choice(templates)
+                return {"sentence": sentence, "target_word": target_word}
+        
+        # Fallback для одного объекта
+        single_templates = [
             f"Я вижу {target_word}",
             f"Мама держит {target_word}",
-            f"Дети играют с {target_word}",
             f"У меня есть {target_word}",
-            f"Папа покупает {target_word}",
             f"Это мой {target_word}",
-            f"Бабушка любит {target_word}",
             f"Вот новый {target_word}"
         ]
         
-        sentence = random.choice(sentence_templates)
-        
-        return {
-            "sentence": sentence,
-            "target_word": target_word
-        }
+        sentence = random.choice(single_templates)
+        return {"sentence": sentence, "target_word": target_word}

@@ -131,7 +131,13 @@ async def extract_objects(file: UploadFile = File(...)):
         if not detections:
             raise HTTPException(status_code=400, detail="Объекты на изображении не обнаружены")
 
-        return ObjectsResponse(detections=detections)
+        objects_ru = []
+        for d in detections:
+            name = d.get('class_ru')
+            if name and name not in objects_ru:
+                objects_ru.append(name)
+
+        return ObjectsResponse(objects=objects_ru, detections=detections)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка обработки: {str(e)}")
