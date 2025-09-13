@@ -1,5 +1,5 @@
 import asyncio
-from typing import List
+from typing import List, Dict, Any
 from ultralytics import YOLO
 import numpy as np
 from PIL import Image
@@ -8,11 +8,12 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+
 class YOLOService:
     def __init__(self):
         self.model = None
         self._load_model()
-    
+
     def _load_model(self):
         try:
             if settings.local:
@@ -24,47 +25,61 @@ class YOLOService:
         except Exception as e:
             logger.error(f"Ошибка загрузки YOLO модели: {e}")
             raise
-    
-    async def classify_objects(self, image: Image.Image) -> List[str]:
+
+    async def classify_objects(self, image: Image.Image) -> List[Dict[str, Any]]:
+        """Возвращает до 10 самых уверенных детекций со следующей структурой:
+        { 'class_ru': str, 'confidence': float, 'bbox': [x1, y1, x2, y2] }
+        """
         if self.model is None:
             raise RuntimeError("YOLO модель не загружена")
-        
+
         try:
             loop = asyncio.get_event_loop()
             results = await loop.run_in_executor(
-                None, 
-                self._run_inference, 
+                None,
+                self._run_inference,
                 image
             )
-            
-            detected_objects = []
+
+            detections = []
             for result in results:
-                if result.boxes is not None:
-                    for box in result.boxes:
-                        class_id = int(box.cls[0])
-                        confidence = float(box.conf[0])
-                        
-                        if confidence > 0.5:
-                            class_name = self.model.names[class_id]
-                            if class_name not in detected_objects:
-                                detected_objects.append(class_name)
-            
-            translated_objects = self.translate_class_names(detected_objects)
-            logger.info(f"Обнаружены объекты: {detected_objects} -> {translated_objects}")
-            return translated_objects
-            
+                boxes = getattr(result, 'boxes', None)
+                if boxes is None or len(boxes) == 0:
+                    continue
+                cls_list = boxes.cls.tolist()
+                conf_list = boxes.conf.tolist()
+                xyxy_list = boxes.xyxy.tolist()
+                for cls_id, conf, xyxy in zip(cls_list, conf_list, xyxy_list):
+                    class_en = self.model.names[int(cls_id)]
+                    detections.append({
+                        'class_en': class_en,
+                        'confidence': float(conf),
+                        'bbox': [float(xyxy[0]), float(xyxy[1]), float(xyxy[2]), float(xyxy[3])]
+                    })
+
+            # Переводим имена классов на русский
+            if detections:
+                translated = self.translate_class_names([d['class_en'] for d in detections])
+                for d, name_ru in zip(detections, translated):
+                    d['class_ru'] = name_ru
+                    d.pop('class_en', None)
+
+            logger.info(f"Детекции (до 10): {detections}")
+            return detections
+
         except Exception as e:
             logger.error(f"Ошибка классификации объектов: {e}")
             raise
-    
+
     def _run_inference(self, image: Image.Image):
         image_array = np.array(image)
-        return self.model(image_array, verbose=False)
-    
+        # Ограничиваем до 10 детекций и фильтруем по conf=0.5 встроенными параметрами
+        return self.model(image_array, verbose=False, conf=0.5, max_det=10)
+
     def translate_class_names(self, objects: List[str]) -> List[str]:
         class_translations = {
             'person': 'человек',
-            'bicycle': 'велосипед', 
+            'bicycle': 'велосипед',
             'car': 'машина',
             'motorcycle': 'мотоцикл',
             'airplane': 'самолет',
@@ -144,10 +159,10 @@ class YOLOService:
             'hair drier': 'фен',
             'toothbrush': 'зубная щетка'
         }
-        
+
         translated = []
         for obj in objects:
             translated_name = class_translations.get(obj.lower(), obj)
             translated.append(translated_name)
-        
+
         return translated
