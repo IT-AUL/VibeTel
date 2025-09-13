@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 import logging
 from app.config import settings
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,9 @@ logger = logging.getLogger(__name__)
 class YOLOService:
     def __init__(self):
         self.model = None
+        self.class_translations: Dict[str, str] = {}
         self._load_model()
+        self._load_class_translations()
 
     def _load_model(self):
         try:
@@ -20,11 +23,50 @@ class YOLOService:
                 self.model = YOLO("yolo11n.pt")
                 logger.info("YOLO модель загружена (локально): yolo11n.pt")
             else:
-                self.model = YOLO("yolo11n_openvino_model/")
+                self.model = YOLO("yolov8n-oiv7_openvino_model/")
                 logger.info("YOLO модель загружена (сервер): yolo11n_openvino_model/")
         except Exception as e:
             logger.error(f"Ошибка загрузки YOLO модели: {e}")
             raise
+
+    def _load_class_translations(self) -> None:
+        """Загружает словарь классов из файла classes.txt в формате 'original:translation'."""
+        try:
+            service_dir = Path(__file__).resolve().parent
+            project_root = service_dir.parent.parent
+            classes_path = project_root / "classes.txt"
+
+            if not classes_path.exists():
+                logger.warning(f"Файл со списком классов не найден: {classes_path}")
+                self.class_translations = {}
+                return
+
+            translations: Dict[str, str] = {}
+            with classes_path.open("r", encoding="utf-8") as f:
+                for i, raw_line in enumerate(f, start=1):
+                    line = raw_line.strip()
+                    # Пропускаем пустые строки и комментарии
+                    if not line or line.startswith("#"):
+                        continue
+                    if ":" not in line:
+                        logger.warning(f"Строка {i} в {classes_path} пропущена: нет разделителя ':'")
+                        continue
+                    original, translation = line.split(":", 1)
+                    original = original.strip()
+                    translation = translation.strip()
+                    if not original:
+                        logger.warning(f"Строка {i} в {classes_path} пропущена: пустой original")
+                        continue
+                    # Ключи приводим к нижнему регистру для устойчивого поиска
+                    translations[original.lower()] = translation or original
+
+            self.class_translations = translations
+            logger.info(
+                f"Загружено классов для перевода: {len(self.class_translations)} из {classes_path}"
+            )
+        except Exception as e:
+            logger.error(f"Ошибка загрузки classes.txt: {e}")
+            self.class_translations = {}
 
     async def classify_objects(self, image: Image.Image) -> List[Dict[str, Any]]:
         """Возвращает до 10 детекций: [{class_ru, confidence, bbox[x1,y1,x2,y2]}]."""
@@ -75,92 +117,13 @@ class YOLOService:
         return self.model(image_array, verbose=False, conf=conf, max_det=max_det)
 
     def translate_class_names(self, objects: List[str]) -> List[str]:
-        class_translations = {
-            'person': 'человек',
-            'bicycle': 'велосипед',
-            'car': 'машина',
-            'motorcycle': 'мотоцикл',
-            'airplane': 'самолет',
-            'bus': 'автобус',
-            'train': 'поезд',
-            'truck': 'грузовик',
-            'boat': 'лодка',
-            'traffic light': 'светофор',
-            'fire hydrant': 'пожарный гидрант',
-            'stop sign': 'знак стоп',
-            'parking meter': 'парковочный счетчик',
-            'bench': 'скамейка',
-            'bird': 'птица',
-            'cat': 'кот',
-            'dog': 'собака',
-            'horse': 'лошадь',
-            'sheep': 'овца',
-            'cow': 'корова',
-            'elephant': 'слон',
-            'bear': 'медведь',
-            'zebra': 'зебра',
-            'giraffe': 'жираф',
-            'backpack': 'рюкзак',
-            'umbrella': 'зонт',
-            'handbag': 'сумка',
-            'tie': 'галстук',
-            'suitcase': 'чемодан',
-            'frisbee': 'фрисби',
-            'skis': 'лыжи',
-            'snowboard': 'сноуборд',
-            'sports ball': 'спортивный мяч',
-            'kite': 'воздушный змей',
-            'baseball bat': 'бейсбольная бита',
-            'baseball glove': 'бейсбольная перчатка',
-            'skateboard': 'скейтборд',
-            'surfboard': 'доска для серфинга',
-            'tennis racket': 'теннисная ракетка',
-            'bottle': 'бутылка',
-            'wine glass': 'бокал',
-            'cup': 'чашка',
-            'fork': 'вилка',
-            'knife': 'нож',
-            'spoon': 'ложка',
-            'bowl': 'миска',
-            'banana': 'банан',
-            'apple': 'яблоко',
-            'sandwich': 'сэндвич',
-            'orange': 'апельсин',
-            'broccoli': 'брокколи',
-            'carrot': 'морковь',
-            'hot dog': 'хот-дог',
-            'pizza': 'пицца',
-            'donut': 'пончик',
-            'cake': 'торт',
-            'chair': 'стул',
-            'couch': 'диван',
-            'potted plant': 'горшечное растение',
-            'bed': 'кровать',
-            'dining table': 'обеденный стол',
-            'toilet': 'туалет',
-            'tv': 'телевизор',
-            'laptop': 'ноутбук',
-            'mouse': 'мышь',
-            'remote': 'пульт',
-            'keyboard': 'клавиатура',
-            'cell phone': 'мобильный телефон',
-            'microwave': 'микроволновка',
-            'oven': 'духовка',
-            'toaster': 'тостер',
-            'sink': 'раковина',
-            'refrigerator': 'холодильник',
-            'book': 'книга',
-            'clock': 'часы',
-            'vase': 'ваза',
-            'scissors': 'ножницы',
-            'teddy bear': 'плюшевый медведь',
-            'hair drier': 'фен',
-            'toothbrush': 'зубная щетка'
-        }
-
-        translated = []
+        """Переводит список английских названий классов в русские по classes.txt.
+        Если перевод не найден, возвращает оригинал.
+        """
+        translated: List[str] = []
         for obj in objects:
-            translated_name = class_translations.get(obj.lower(), obj)
+            key = (obj or "").lower()
+            translated_name = self.class_translations.get(key, obj)
             translated.append(translated_name)
 
         return translated
