@@ -131,6 +131,7 @@ async def extract_objects(file: UploadFile = File(...)):
         if not detections:
             raise HTTPException(status_code=400, detail="Объекты на изображении не обнаружены")
 
+        # Список уникальных русских названий объектов по убыванию уверенности
         objects_ru = []
         for d in detections:
             name = d.get('class_ru')
