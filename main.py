@@ -10,11 +10,13 @@ from app.services.yandex_gpt_service import YandexGPTService
 from app.services.translator_service import TranslatorService
 from app.services.database_service import DatabaseService
 from app.models.responses import (
-    ProcessImageResponse, SentencesResponse, TranslationDirectionResponse, 
+    ProcessImageResponse, SentencesResponse, TranslationDirectionResponse,
     TranslationDirectionRequest, ObjectsResponse, SentenceGenerationRequest,
-    SentenceGenerationResponse, TranslationRequest, TranslationResponse
+    SentenceGenerationResponse, TranslationRequest, TranslationResponse, AudioRequest, AudioResponse
 )
 from app.utils.image_processor import ImageProcessor
+# Импортируем модуль сервиса аудио, чтобы избежать конфликта имён функции
+from app.services import audio_generator
 
 load_dotenv()
 
@@ -239,6 +241,19 @@ async def set_translation_direction(request: TranslationDirectionRequest):
         "target_language": request.target_language
     }
 
+@app.post("/audio", response_model=AudioResponse)
+async def generate_audio(request: AudioRequest):
+    try:
+        result = await audio_generator.generate_audio(request)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        # Ошибки внешнего TTS сервиса
+        raise HTTPException(status_code=502, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка генерации аудио: {str(e)}")
+
 @app.get("/health")
 async def health_check():
     return {
@@ -249,4 +264,3 @@ async def health_check():
             "yandex_gpt": "OK" if yandex_gpt_service.sdk else "NOT_CONFIGURED"
         }
     }
-
