@@ -111,6 +111,9 @@ async def process_image(file: UploadFile = File(..., description="Изображ
             detections=detections
         )
 
+    except HTTPException as e:
+        # Пробрасываем уже сформированные 4xx/5xx ошибки как есть
+        raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка обработки: {str(e)}")
 
@@ -140,6 +143,9 @@ async def extract_objects(file: UploadFile = File(..., description="Изобра
 
         return ObjectsResponse(objects=objects_ru, detections=detections)
 
+    except HTTPException as e:
+        # Пробрасываем 4xx ошибки, чтобы не превращались в 500
+        raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка обработки: {str(e)}")
 
