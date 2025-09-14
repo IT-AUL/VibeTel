@@ -122,7 +122,7 @@ class YOLOService:
             logger.error(f"Ошибка классификации объектов: {e}")
             raise
 
-    def _run_inference(self, image: Image.Image, conf: float = 0.5, max_det: int = 10):
+    def _run_inference(self, image: Image.Image, conf: float = 0.25, max_det: int = 10):
         image_array = np.array(image)
         # Ограничиваем до 10 детекций и фильтруем по conf встроенными параметрами
         return self.model(image_array, verbose=False, conf=conf, max_det=max_det)
