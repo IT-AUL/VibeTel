@@ -96,3 +96,14 @@ class AudioRequest(BaseModel):
 
 class AudioResponse(BaseModel):
     audio_base64: str
+
+
+class AlbumMemoryRequest(BaseModel):
+    objects: List[str]
+    album_theme: str = ""
+
+
+class AlbumMemoryResponse(BaseModel):
+    memory_ru: str
+    memory_tt: str
+    used_objects: List[str]

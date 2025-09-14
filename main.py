@@ -13,7 +13,7 @@ from app.models.responses import (
     ProcessImageResponse, SentencesResponse, TranslationDirectionResponse,
     TranslationDirectionRequest, ObjectsResponse, SentenceGenerationRequest,
     SentenceGenerationResponse, TranslationRequest, TranslationResponse, AudioRequest, AudioResponse,
-    BilingualSentenceResponse
+    BilingualSentenceResponse, AlbumMemoryRequest, AlbumMemoryResponse
 )
 from app.utils.image_processor import ImageProcessor
 from app.services import audio_generator
@@ -229,6 +229,45 @@ async def generate_sentence_bilingual(request: SentenceGenerationRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка генерации предложения: {str(e)}")
+
+
+@app.post("/generate-album-memory", response_model=AlbumMemoryResponse)
+async def generate_album_memory(request: AlbumMemoryRequest):
+    try:
+        if not request.objects:
+            raise HTTPException(status_code=400, detail="Список объектов не может быть пустым")
+        
+        if len(request.objects) < 2:
+            raise HTTPException(status_code=400, detail="Для альбома нужно минимум 2 объекта")
+
+        memory_data = await yandex_gpt_service.generate_album_memory(
+            objects=request.objects,
+            album_theme=request.album_theme,
+        )
+
+        memory_ru = memory_data["memory"]
+        used_objects = memory_data["used_objects"]
+
+        # Переводим абзац на татарский
+        memory_tt = await translator_service.translate_text(memory_ru)
+
+        # Сохраняем русскую версию в БД как специальное воспоминание альбома
+        await database_service.save_sentence(
+            sentence=memory_ru,
+            target_word="album_memory",  # Специальный маркер для абзацев альбома
+            objects=used_objects
+        )
+
+        return AlbumMemoryResponse(
+            memory_ru=memory_ru,
+            memory_tt=memory_tt,
+            used_objects=used_objects
+        )
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка генерации воспоминания альбома: {str(e)}")
 
 
 @app.post("/translate", response_model=TranslationResponse)
