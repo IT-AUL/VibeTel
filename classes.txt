@@ -25,6 +25,7 @@ Banjo:Банджо
 Barge:Баржа
 Barrel:Бочка
 Baseball bat:Бейсбольная бита
+bat:Бита
 Baseball glove:Бейсбольная перчатка
 Bat (Animal):Летучая мышь
 Bathroom accessory:Аксессуар для ванной комнаты
@@ -99,6 +100,7 @@ Cat furniture:Мебель для кошек
 Caterpillar:Гусеница
 Cattle:Крупный рогатый скот
 Ceiling fan:Потолочный вентилятор
+fan:Вентилятор
 Cello:Виолончель
 Centipede:Сороконожка
 Chainsaw:Бензопила
@@ -120,13 +122,16 @@ Cocktail shaker:Шейкер для коктейлей
 Coconut:Кокос
 Coffee:Кофе
 Coffee cup:Чашка для кофе
+cup:Чашка
 Coffee table:Журнальный столик
 Coffeemaker:Кофеварка
 Coin:Монета
 Common fig:Инжир
 Common sunflower:Подсолнечник
 Computer keyboard:Клавиатура
+keyboard:Клавиатура
 Computer monitor:Монитор
+monitor:Монитор
 Computer mouse:Компьютерная мышь
 Container:Контейнер
 Convenience store:Магазин у дома
@@ -230,6 +235,7 @@ Grinder:Измельчитель
 Guacamole:Гуакамоле
 Guitar:Гитара
 Hair dryer:Фен
+dryer:Сушилка
 Hair spray:Лак для волос
 Hamburger:Гамбургер
 Hammer:Молоток
@@ -338,6 +344,7 @@ Missile:Ракета
 Mixer:Миксер
 Mixing bowl:Миска для смешивания
 Mobile phone:Мобильный телефон
+phone:Телефон
 Monkey:Обезьяна
 Moths and butterflies:Мотыльки и бабочки
 Motorcycle:Мотоцикл
@@ -369,6 +376,7 @@ Paper cutter:Резак для бумаги
 Paper towel:Бумажное полотенце
 Parachute:Парашют
 Parking meter:Паркомат
+meter:Счётчик
 Parrot:Попугай
 Pasta:Паста
 Pastry:Кондитерское изделие
@@ -418,6 +426,7 @@ Raven:Ворон
 Rays and skates:Скаты и морские лисицы
 Red panda:Красная панда
 Refrigerator:Холодильник
+remote:Пульт
 Remote control:Пульт дистанционного управления
 Reptile:Рептилия
 Rhinoceros:Носорог
@@ -494,6 +503,7 @@ Stationary bicycle:Велотренажёр
 Stethoscope:Стетоскоп
 Stool:Табурет
 Stop sign:Знак стоп
+sign:Знак
 Strawberry:Клубника
 Street light:Уличный фонарь
 Stretcher:Носилки
@@ -547,6 +557,7 @@ Towel:Полотенце
 Tower:Башня
 Toy:Игрушка
 Traffic light:Светофор
+light:Свет
 Traffic sign:Дорожный знак
 Train:Поезд
 Training bench:Тренировочная скамья
@@ -574,6 +585,7 @@ Waffle iron:Вафельница
 Wall clock:Настенные часы
 Wardrobe:Гардероб
 Washing machine:Стиральная машина
+machine:Машина
 Waste container:Мусорный контейнер
 Watch:Наручные часы
 Watercraft:Водное судно
@@ -589,6 +601,7 @@ Window:Окно
 Window blind:Жалюзи
 Wine:Вино
 Wine glass:Бокал для вина
+glass:Стакан
 Wine rack:Винная полка
 Winter melon:Восковая тыква
 Wok:Вок
