@@ -25,7 +25,6 @@ Banjo:Банджо
 Barge:Баржа
 Barrel:Бочка
 Baseball bat:Бейсбольная бита
-bat:Бита
 Baseball glove:Бейсбольная перчатка
 Bat (Animal):Летучая мышь
 Bathroom accessory:Аксессуар для ванной комнаты
@@ -557,7 +556,6 @@ Towel:Полотенце
 Tower:Башня
 Toy:Игрушка
 Traffic light:Светофор
-light:Свет
 Traffic sign:Дорожный знак
 Train:Поезд
 Training bench:Тренировочная скамья
@@ -601,7 +599,6 @@ Window:Окно
 Window blind:Жалюзи
 Wine:Вино
 Wine glass:Бокал для вина
-glass:Стакан
 Wine rack:Винная полка
 Winter melon:Восковая тыква
 Wok:Вок

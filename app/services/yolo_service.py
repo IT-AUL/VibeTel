@@ -23,7 +23,7 @@ class YOLOService:
                 self.model = YOLO("yolo11n.pt")
                 logger.info("YOLO модель загружена (локально): yolo11n.pt")
             else:
-                self.model = YOLO("yolov8n-oiv7_openvino_model/")
+                self.model = YOLO("yolov8m-oiv7_openvino_model/")
                 logger.info("YOLO модель загружена (сервер): yolo11n_openvino_model/")
         except Exception as e:
             logger.error(f"Ошибка загрузки YOLO модели: {e}")
